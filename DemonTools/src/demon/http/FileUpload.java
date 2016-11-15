@@ -1,4 +1,4 @@
-package demon.fileupload;
+package demon.http;
 
 import java.io.BufferedReader;
 import java.io.DataInputStream;
@@ -11,52 +11,58 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
+/**
+ * 模拟 WEB 的表单提交
+ * 
+ * @author Demon
+ */
 public class FileUpload {
 
     /**
      * 模拟form表单的形式 ，上传文件 以输出流的形式把文件写入到url中，然后用输入流来获取url的响应
-     * 
+     *
      * @param url 请求地址 form表单url地址
      * @param filePath 文件路径
+     * @param  size 文件大小
      * @return String url的响应信息返回值
      * @throws IOException
      */
-    public String send(String url, String filePath) throws IOException {
+    public String send(String url, String filePath, int size) throws IOException {
         String result = null;
-
+        URL urlObj = new URL(url);
+        
         File file = new File(filePath);
         if (!file.exists() || !file.isFile()) {
             throw new IOException("文件不存在");
         }
-
-        // 第一部分
-        URL urlObj = new URL(url);
+        
         // 连接
         HttpURLConnection con = (HttpURLConnection) urlObj.openConnection();
-
         // 设置关键值
         con.setRequestMethod("POST"); // 以Post方式提交表单，默认get方式
         con.setDoInput(true);
         con.setDoOutput(true);
         con.setUseCaches(false); // post方式不能使用缓存
-
         // 设置请求头信息
         con.setRequestProperty("Connection", "Keep-Alive");
         con.setRequestProperty("Charset", "UTF-8");
-
         // 设置边界
         String BOUNDARY = "----------" + System.currentTimeMillis();
         con.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + BOUNDARY);
-
         // 请求正文信息
-
-        // 第一部分：
         StringBuilder sb = new StringBuilder();
+        // 封装多个字段时候的写法
+        sb.append("--");
+        sb.append(BOUNDARY);
+        sb.append("\r\n");
+        sb.append("Content-Disposition: form-data;name=\"size\"");
+        sb.append("\r\n\r\n");
+        sb.append(size);
+        sb.append("\r\n");
         sb.append("--"); // 必须多两道线
         sb.append(BOUNDARY);
         sb.append("\r\n");
         sb.append("Content-Disposition: form-data;name=\"file\";filename=\"" + file.getName() + "\"\r\n");
-        sb.append("Content-Type:application/octet-stream\r\n\r\n");
         sb.append("Content-Type:application/octet-stream\r\n\r\n");
 
         byte[] head = sb.toString().getBytes("utf-8");
@@ -65,8 +71,7 @@ public class FileUpload {
         OutputStream out = new DataOutputStream(con.getOutputStream());
         // 输出表头
         out.write(head);
-
-        // 文件正文部分
+        
         // 把文件以流文件的方式 推入到url中
         DataInputStream in = new DataInputStream(new FileInputStream(file));
         int bytes = 0;
@@ -76,7 +81,6 @@ public class FileUpload {
         }
         in.close();
 
-        // 结尾部分
         byte[] foot = ("\r\n--" + BOUNDARY + "--\r\n").getBytes("utf-8");// 定义最后数据分隔线
         out.write(foot);
         out.flush();
@@ -105,7 +109,6 @@ public class FileUpload {
 
         return result;
     }
-
 
 //    public static void main(String[] args) throws IOException {
 //        String filePath = "f:/动画切换.html";
